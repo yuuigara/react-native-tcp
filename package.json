@@ -3,6 +3,7 @@
   "version": "3.3.0",
   "description": "node's net API for react-native",
   "main": "TcpSockets.js",
+  "private": true,
   "scripts": {
     "start": "exit 1"
   },
@@ -11,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/PeelTechnologies/react-native-tcp"
+    "url": "https://github.com/yuuigara/react-native-tcp"
   },
   "keywords": [
     "react-component",
@@ -29,9 +30,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/PeelTechnologies/react-native-tcp/issues"
+    "url": "https://github.com/yuuigara/react-native-tcp/issues"
   },
-  "homepage": "https://github.com/PeelTechnologies/react-native-tcp",
+  "homepage": "https://github.com/yuuigara/react-native-tcp",
   "peerDependencies": {
     "react-native": ">=0.40.0"
   },

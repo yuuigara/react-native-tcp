@@ -15,9 +15,7 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 {
 @private
     GCDAsyncSocket *_tcpSocket;
-    NSMutableDictionary<NSNumber *, RCTResponseSenderBlock> *_pendingSends;
     NSLock *_lock;
-    long _sendTag;
 }
 
 - (id)initWithClientId:(NSNumber *)clientID andConfig:(id<SocketClientDelegate>)aDelegate;
@@ -26,6 +24,18 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 @end
 
 @implementation TcpSocketClient
+
+static NSMutableDictionary<NSNumber *, RCTResponseSenderBlock> *pendingSends;
+static long sendTag;
+
++(void) initialize
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sendTag = 0;
+        pendingSends = [NSMutableDictionary dictionary];
+    });
+}
 
 + (id)socketClientWithId:(nonnull NSNumber *)clientID andConfig:(id<SocketClientDelegate>)delegate
 {
@@ -43,7 +53,6 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
     if (self) {
         _id = clientID;
         _clientDelegate = aDelegate;
-        _pendingSends = [NSMutableDictionary dictionary];
         _lock = [[NSLock alloc] init];
         _tcpSocket = tcpSocket;
         [_tcpSocket setUserData: clientID];
@@ -123,7 +132,7 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 
     // GCDAsyncSocket doesn't recognize 0.0.0.0
     if ([@"0.0.0.0" isEqualToString: host]) {
-        host = @"localhost";
+        host = nil;
     }
     BOOL isListening = [_tcpSocket acceptOnInterface:host port:port error:error];
     if (isListening == YES) {
@@ -138,7 +147,7 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 {
     [_lock lock];
     @try {
-        [_pendingSends setObject:callback forKey:key];
+        [pendingSends setObject:callback forKey:key];
     }
     @finally {
         [_lock unlock];
@@ -149,7 +158,7 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 {
     [_lock lock];
     @try {
-        return [_pendingSends objectForKey:key];
+        return [pendingSends objectForKey:key];
     }
     @finally {
         [_lock unlock];
@@ -160,7 +169,7 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
 {
     [_lock lock];
     @try {
-        [_pendingSends removeObjectForKey:key];
+        [pendingSends removeObjectForKey:key];
     }
     @finally {
         [_lock unlock];
@@ -181,11 +190,11 @@ NSString *const RCTTCPErrorDomain = @"RCTTCPErrorDomain";
           callback:(RCTResponseSenderBlock)callback
 {
     if (callback) {
-        [self setPendingSend:callback forKey:@(_sendTag)];
+        [self setPendingSend:callback forKey:@(sendTag)];
     }
-    [_tcpSocket writeData:data withTimeout:-1 tag:_sendTag];
+    [_tcpSocket writeData:data withTimeout:-1 tag:sendTag];
 
-    _sendTag++;
+    sendTag++;
 
     [_tcpSocket readDataWithTimeout:-1 tag:_id.longValue];
 }
